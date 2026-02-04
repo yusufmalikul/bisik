@@ -1,5 +1,5 @@
 // Initialize Supabase client
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // DOM Elements
 const chatMessages = document.getElementById('chatMessages');
@@ -22,7 +22,7 @@ function init() {
 
 // Setup Supabase Realtime Broadcast channel
 function setupRealtimeChannel() {
-  channel = supabase.channel('public-chat', {
+  channel = supabaseClient.channel('public-chat', {
     config: {
       broadcast: { self: false } // Don't receive your own messages
     }

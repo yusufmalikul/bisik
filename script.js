@@ -129,6 +129,24 @@ messageInput.addEventListener('input', () => {
   sendButton.disabled = !messageInput.value.trim();
 });
 
+// Handle mobile keyboard - scroll to bottom when input is focused
+messageInput.addEventListener('focus', () => {
+  // Small delay to let the keyboard open
+  setTimeout(() => {
+    scrollToBottom();
+  }, 300);
+});
+
+// Handle viewport resize (keyboard open/close on mobile)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    // Scroll to bottom when viewport changes (keyboard opens)
+    if (document.activeElement === messageInput) {
+      scrollToBottom();
+    }
+  });
+}
+
 // Initialize
 init();
 sendButton.disabled = true;

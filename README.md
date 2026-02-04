@@ -2,6 +2,8 @@
 
 Anonymous public chat application using Supabase Realtime Broadcast. Messages are broadcast in real-time to connected users only and not stored in any database.
 
+**Live Demo:** [bisikchat.vercel.app](https://bisikchat.vercel.app)
+
 ## Features
 
 - Anonymous usernames generated automatically

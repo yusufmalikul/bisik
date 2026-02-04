@@ -7,8 +7,41 @@ const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 
+// Funny username generator
+const professions = [
+  "Accountant", "Lawyer", "Dentist", "Plumber", "Chef", "Librarian",
+  "Astronaut", "Janitor", "Professor", "Wizard", "Intern", "CEO",
+  "Therapist", "Barista", "Archaeologist", "Surgeon", "Poet", "Hacker"
+];
+
+const objects = [
+  "Doom", "Socks", "Chaos", "Spoons", "Thunder", "Muffins", "Regret",
+  "Glitter", "Secrets", "Beans", "Mystery", "Waffles", "Shadows",
+  "Pickles", "Destiny", "Noodles", "Silence", "Mayhem", "Cheese"
+];
+
+const connectors = ["Of", "With", "And"];
+
+function generateUsername() {
+  const profession = professions[Math.floor(Math.random() * professions.length)];
+  const connector = connectors[Math.floor(Math.random() * connectors.length)];
+  const object = objects[Math.floor(Math.random() * objects.length)];
+  return profession + connector + object;
+}
+
 // Generate a random anonymous username
-const myId = 'anon_' + Math.random().toString(36).substring(2, 8);
+const myId = generateUsername();
+
+// Security constants
+const MAX_MESSAGE_LENGTH = 150;
+const RATE_LIMIT_MS = 1000; // Minimum time between messages
+const SLIDING_WINDOW_MS = 30000; // 30 second window
+const MAX_MESSAGES_PER_WINDOW = 5; // Max messages in sliding window
+const DUPLICATE_BLOCK_MS = 60000; // Block duplicate messages for 60 seconds
+
+let lastMessageTime = 0;
+let messageTimestamps = []; // For sliding window
+let recentMessages = []; // For duplicate detection {text, timestamp}
 
 // Supabase Realtime Broadcast channel
 let channel;
@@ -31,6 +64,10 @@ function setupRealtimeChannel() {
   channel
     .on('broadcast', { event: 'message' }, (payload) => {
       const { senderId, content } = payload.payload;
+      // Validate incoming message
+      if (typeof content !== 'string' || typeof senderId !== 'string') return;
+      if (content.length === 0 || content.length > MAX_MESSAGE_LENGTH) return;
+      if (senderId.length === 0 || senderId.length > 50) return;
       addMessage(content, senderId, false);
     })
     .subscribe((status) => {
@@ -123,12 +160,53 @@ function sendMessage(text) {
   addMessage(text, myId, true);
 }
 
+// Check sliding window rate limit
+function isRateLimited(now) {
+  // Clean old timestamps
+  messageTimestamps = messageTimestamps.filter(t => now - t < SLIDING_WINDOW_MS);
+  return messageTimestamps.length >= MAX_MESSAGES_PER_WINDOW;
+}
+
+// Check for duplicate message
+function isDuplicate(text, now) {
+  // Clean old messages
+  recentMessages = recentMessages.filter(m => now - m.timestamp < DUPLICATE_BLOCK_MS);
+  return recentMessages.some(m => m.text === text);
+}
+
 // Handle form submission
 function handleSubmit(e) {
   e.preventDefault();
 
   const text = messageInput.value.trim();
-  if (!text) return;
+  if (text.length < 2) return;
+
+  // Validate message length (defense in depth - HTML maxlength can be bypassed)
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    messageInput.value = text.substring(0, MAX_MESSAGE_LENGTH);
+    return;
+  }
+
+  const now = Date.now();
+
+  // Basic rate limiting (1 msg/sec)
+  if (now - lastMessageTime < RATE_LIMIT_MS) {
+    return;
+  }
+
+  // Sliding window rate limiting
+  if (isRateLimited(now)) {
+    return;
+  }
+
+  // Duplicate message check
+  if (isDuplicate(text, now)) {
+    return;
+  }
+
+  lastMessageTime = now;
+  messageTimestamps.push(now);
+  recentMessages.push({ text, timestamp: now });
 
   // Send message via broadcast
   sendMessage(text);
@@ -144,7 +222,7 @@ chatForm.addEventListener('submit', handleSubmit);
 
 // Enable/disable send button based on input
 messageInput.addEventListener('input', () => {
-  sendButton.disabled = !messageInput.value.trim();
+  sendButton.disabled = messageInput.value.trim().length < 2;
 });
 
 // Handle mobile keyboard - scroll to bottom when input is focused

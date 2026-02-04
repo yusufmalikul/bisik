@@ -1,0 +1,6 @@
+{
+  "name": "bisik",
+  "scripts": {
+    "build": "sed \"s|YOUR_SUPABASE_URL|$SUPABASE_URL|g; s|YOUR_SUPABASE_PUBLISHABLE_KEY|$SUPABASE_PUBLISHABLE_KEY|g\" config.js > config.tmp && mv config.tmp config.js"
+  }
+}

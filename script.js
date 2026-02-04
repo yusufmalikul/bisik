@@ -1,3 +1,6 @@
+// Initialize Supabase client
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
 // DOM Elements
 const chatMessages = document.getElementById('chatMessages');
 const chatForm = document.getElementById('chatForm');
@@ -5,12 +8,36 @@ const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 
 // Generate a random anonymous username
-const anonymousId = 'anon_' + Math.random().toString(36).substring(2, 8);
+const myId = 'anon_' + Math.random().toString(36).substring(2, 8);
+
+// Supabase Realtime Broadcast channel
+let channel;
 
 // Initialize the chat
 function init() {
   showEmptyState();
   messageInput.focus();
+  setupRealtimeChannel();
+}
+
+// Setup Supabase Realtime Broadcast channel
+function setupRealtimeChannel() {
+  channel = supabase.channel('public-chat', {
+    config: {
+      broadcast: { self: false } // Don't receive your own messages
+    }
+  });
+
+  channel
+    .on('broadcast', { event: 'message' }, (payload) => {
+      const { senderId, content } = payload.payload;
+      addMessage(content, senderId, false);
+    })
+    .subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('Connected to chat room');
+      }
+    });
 }
 
 // Show empty state when no messages
@@ -49,7 +76,7 @@ function createMessageElement(text, userId, time, isSent) {
 
   messageDiv.innerHTML = `
     <div class="message-meta">
-      <span class="message-user">${displayName}</span>
+      <span class="message-user">${escapeHtml(displayName)}</span>
       <span class="message-time">${formatTime(time)}</span>
     </div>
     <div class="message-text">${escapeHtml(text)}</div>
@@ -81,6 +108,21 @@ function scrollToBottom() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// Send message via Supabase Broadcast
+function sendMessage(text) {
+  channel.send({
+    type: 'broadcast',
+    event: 'message',
+    payload: {
+      senderId: myId,
+      content: text
+    }
+  });
+
+  // Add to your own UI immediately
+  addMessage(text, myId, true);
+}
+
 // Handle form submission
 function handleSubmit(e) {
   e.preventDefault();
@@ -88,37 +130,13 @@ function handleSubmit(e) {
   const text = messageInput.value.trim();
   if (!text) return;
 
-  // Add message to chat (as sent)
-  addMessage(text, anonymousId, true);
+  // Send message via broadcast
+  sendMessage(text);
 
   // Clear input
   messageInput.value = '';
+  sendButton.disabled = true;
   messageInput.focus();
-
-  // Here you would typically send the message to a server
-  // For demo purposes, we'll simulate receiving a response
-  simulateResponse();
-}
-
-// Simulate receiving messages (for demo purposes)
-function simulateResponse() {
-  const demoMessages = [
-    "Hey there!",
-    "Welcome to Bisik!",
-    "This is a public chat room.",
-    "Feel free to chat anonymously.",
-    "Have a great conversation!",
-  ];
-
-  // Randomly decide whether to send a simulated response
-  if (Math.random() > 0.5) {
-    const delay = 1000 + Math.random() * 2000;
-    setTimeout(() => {
-      const randomMessage = demoMessages[Math.floor(Math.random() * demoMessages.length)];
-      const randomUser = 'anon_' + Math.random().toString(36).substring(2, 8);
-      addMessage(randomMessage, randomUser, false);
-    }, delay);
-  }
 }
 
 // Event listeners

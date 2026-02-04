@@ -40,9 +40,15 @@ const SLIDING_WINDOW_MS = 30000; // 30 second window
 const MAX_MESSAGES_PER_WINDOW = 5; // Max messages in sliding window
 const DUPLICATE_BLOCK_MS = 60000; // Block duplicate messages for 60 seconds
 
+// Receive rate limiting (per sender)
+const RECEIVE_RATE_LIMIT_MS = 500; // Min time between messages from same sender
+const RECEIVE_MAX_PER_WINDOW = 10; // Max messages per sender in window
+const RECEIVE_WINDOW_MS = 10000; // 10 second window
+
 let lastMessageTime = 0;
 let messageTimestamps = []; // For sliding window
 let recentMessages = []; // For duplicate detection {text, timestamp}
+let receivedFromSenders = {}; // Track received messages per sender { senderId: [timestamps] }
 
 // Supabase Realtime Broadcast channel
 let channel;
@@ -69,6 +75,8 @@ function setupRealtimeChannel() {
       if (typeof content !== 'string' || typeof senderId !== 'string') return;
       if (content.length === 0 || content.length > MAX_MESSAGE_LENGTH) return;
       if (senderId.length === 0 || senderId.length > 50) return;
+      // Throttle spammy senders
+      if (shouldThrottleReceive(senderId)) return;
       addMessage(content, senderId, false);
     })
     .subscribe((status) => {
@@ -141,6 +149,19 @@ function addMessage(text, userId, isSent = false) {
   scrollToBottom();
 }
 
+// Add system message to chat
+function addSystemMessage(text) {
+  removeEmptyState();
+
+  const messageDiv = document.createElement('div');
+  messageDiv.className = 'message system';
+  messageDiv.innerHTML = `
+    <div class="message-text">${escapeHtml(text)}</div>
+  `;
+  chatMessages.appendChild(messageDiv);
+  scrollToBottom();
+}
+
 // Scroll to bottom of chat
 function scrollToBottom() {
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -175,6 +196,36 @@ function isDuplicate(text, now) {
   return recentMessages.some(m => m.text === text);
 }
 
+// Check if incoming message from sender should be throttled
+function shouldThrottleReceive(senderId) {
+  const now = Date.now();
+
+  if (!receivedFromSenders[senderId]) {
+    receivedFromSenders[senderId] = [];
+  }
+
+  // Clean old timestamps
+  receivedFromSenders[senderId] = receivedFromSenders[senderId].filter(
+    t => now - t < RECEIVE_WINDOW_MS
+  );
+
+  const timestamps = receivedFromSenders[senderId];
+
+  // Check rate limit (too fast)
+  if (timestamps.length > 0 && now - timestamps[timestamps.length - 1] < RECEIVE_RATE_LIMIT_MS) {
+    return true;
+  }
+
+  // Check sliding window limit
+  if (timestamps.length >= RECEIVE_MAX_PER_WINDOW) {
+    return true;
+  }
+
+  // Record this message
+  timestamps.push(now);
+  return false;
+}
+
 // Handle form submission
 function handleSubmit(e) {
   e.preventDefault();
@@ -197,6 +248,7 @@ function handleSubmit(e) {
 
   // Sliding window rate limiting
   if (isRateLimited(now)) {
+    addSystemMessage('Please wait before sending another message.');
     return;
   }
 

@@ -107,6 +107,26 @@ html, body {
   margin-top: 2px;
 }
 
+.online-status {
+  font-size: 0.75rem;
+  color: var(--gray-400);
+  margin-top: 4px;
+}
+
+.online-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #22c55e;
+  border-radius: 50%;
+  display: inline-block;
+}
+
 /* Messages Area */
 .chat-messages {
   flex: 1;

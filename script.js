@@ -7,6 +7,7 @@ const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
 const clearButton = document.getElementById('clearButton');
+const onlineCount = document.getElementById('onlineCount');
 
 // Funny username generator
 const professions = [
@@ -60,11 +61,17 @@ function init() {
   setupRealtimeChannel();
 }
 
+// Update online count display
+function updateOnlineCount(count) {
+  onlineCount.textContent = count;
+}
+
 // Setup Supabase Realtime Broadcast channel
 function setupRealtimeChannel() {
   channel = supabaseClient.channel('public-chat', {
     config: {
-      broadcast: { self: false } // Don't receive your own messages
+      broadcast: { self: false }, // Don't receive your own messages
+      presence: { key: myId }
     }
   });
 
@@ -79,9 +86,16 @@ function setupRealtimeChannel() {
       if (shouldThrottleReceive(senderId)) return;
       addMessage(content, senderId, false);
     })
-    .subscribe((status) => {
+    .on('presence', { event: 'sync' }, () => {
+      const presenceState = channel.presenceState();
+      const count = Object.keys(presenceState).length;
+      updateOnlineCount(count);
+    })
+    .subscribe(async (status) => {
       if (status === 'SUBSCRIBED') {
         console.log('Connected to chat room');
+        // Track our presence
+        await channel.track({ user_id: myId });
       }
     });
 }

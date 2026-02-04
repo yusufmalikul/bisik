@@ -90,6 +90,15 @@ html, body {
   font-weight: 600;
   color: var(--gray-900);
   letter-spacing: -0.025em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+}
+
+.title-icon {
+  width: 28px;
+  height: 28px;
 }
 
 .chat-header p {

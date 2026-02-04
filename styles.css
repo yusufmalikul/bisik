@@ -50,8 +50,39 @@ html, body {
   padding: 16px 20px;
   background-color: var(--white);
   border-bottom: 1px solid var(--gray-200);
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   flex-shrink: 0;
+}
+
+.header-content {
+  text-align: center;
+}
+
+.header-spacer {
+  width: 36px;
+  flex-shrink: 0;
+}
+
+.clear-button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background-color: transparent;
+  color: var(--gray-400);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.clear-button:hover {
+  background-color: var(--gray-100);
+  color: var(--gray-600);
 }
 
 .chat-header h1 {

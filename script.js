@@ -6,6 +6,7 @@ const chatMessages = document.getElementById('chatMessages');
 const chatForm = document.getElementById('chatForm');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
+const clearButton = document.getElementById('clearButton');
 
 // Funny username generator
 const professions = [
@@ -217,8 +218,16 @@ function handleSubmit(e) {
   messageInput.focus();
 }
 
+// Clear chat history
+function clearChat() {
+  chatMessages.innerHTML = '';
+  showEmptyState();
+  messageInput.focus();
+}
+
 // Event listeners
 chatForm.addEventListener('submit', handleSubmit);
+clearButton.addEventListener('click', clearChat);
 
 // Enable/disable send button based on input
 messageInput.addEventListener('input', () => {
